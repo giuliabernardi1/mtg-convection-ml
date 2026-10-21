@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import shutil
+
 from datetime import datetime
 from pathlib import Path
 
@@ -62,7 +64,7 @@ def download(product, out_dir: Path) -> Path | None:
         with product.open() as src:
             target = out_dir / src.name
             if target.exists():
-                log.info("Skipped %s: already exists", target.name)
+                log.debug("Skipped %s: already exists", target.name)
                 return target
             tmp = target.with_name(target.name + ".part")
             with open(tmp, "wb") as dst:
@@ -75,3 +77,35 @@ def download(product, out_dir: Path) -> Path | None:
         log.error("Download of %s failed: %s", product, error)
     return None
 
+
+CHUNK_NUMBER_PATTERN = re.compile(r"_(\d{4})\.nc$")
+
+
+def select_entries(entry_names, chunk_ids=None) -> list[str]:
+    """Keep only BODY files; if chunk_ids is given, keep only those chunks."""
+    selected_names = []
+    for entry_name in entry_names:
+        if "CHK-BODY" not in entry_name:
+            continue
+        match = CHUNK_NUMBER_PATTERN.search(entry_name)
+        if chunk_ids is None or (match and match.group(1) in chunk_ids):
+            selected_names.append(entry_name)
+    return selected_names
+
+
+def download_entry(product, entry_name: str, out_dir: Path) -> Path | None:
+    """Download one file contained in a product."""
+    target_path = out_dir / Path(entry_name).name
+    if target_path.exists():
+        log.debug("Skipped %s: already exists", target_path.name)
+        return target_path
+    temporary_path = target_path.with_name(target_path.name + ".part")
+    try:
+        with product.open(entry=entry_name) as source_stream, open(temporary_path, "wb") as output_file:
+            shutil.copyfileobj(source_stream, output_file)
+    except (eumdac.product.ProductError, requests.exceptions.RequestException) as error:
+        log.error("Entry %s of %s failed: %s", entry_name, product, error)
+        temporary_path.unlink(missing_ok=True)
+        return None
+    temporary_path.rename(target_path)
+    return target_path
