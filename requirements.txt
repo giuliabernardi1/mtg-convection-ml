@@ -6,4 +6,5 @@ netCDF4==1.7.4
 pandas==3.0.6
 requests==2.34.2
 satpy==0.60.0
+tqdm==4.70.1
 xarray==2026.9.0
