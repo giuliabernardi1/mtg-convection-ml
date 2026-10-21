@@ -76,7 +76,6 @@ def test_group_by_cycle_groups_chunks_of_the_same_cycle():
     assert groups[datetime(2026, 7, 20, 1, 0)] == [other_cycle_path]
 
 
-# --- window over the region of interest ---
 
 def test_find_italy_window_selects_rows_and_columns_inside_the_box(monkeypatch):
     monkeypatch.setattr(pp, "AREA_EXTENT", (6.6, 36.5, 18.8, 47.1))
@@ -95,7 +94,6 @@ def test_find_italy_window_selects_rows_and_columns_inside_the_box(monkeypatch):
     np.testing.assert_array_equal(window_latitudes[:, 0], [45.0, 42.0, 39.0])
 
 
-# --- one cycle ---
 
 def test_process_cycle_flips_fci_crops_both_products_and_fills_missing_flashes(monkeypatch):
     rows, cols = np.indices((6, 6))
