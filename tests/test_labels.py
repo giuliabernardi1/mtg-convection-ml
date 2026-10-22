@@ -47,3 +47,17 @@ def test_label_uses_future_cycle_and_persistence_uses_current_cycle(tmp_path):
     assert positive_label_cells == [[0, 1]]                    # flash at 13:00
     assert persistence_cells == [[1, 0]]                       # flash at 12:30
     assert np.allclose(samples["ir_cooling"], -10.0)           # 240 K now vs 250 K thirty minutes earlier
+
+def test_neighbourhood_feature_spreads_current_lightning_to_adjacent_cells(tmp_path):
+    write_fake_cycle(tmp_path, datetime(2026, 7, 20, 12, 0))
+    write_fake_cycle(tmp_path, datetime(2026, 7, 20, 12, 30), flash_cell=(1, 0))
+    write_fake_cycle(tmp_path, datetime(2026, 7, 20, 13, 0))
+
+    samples = build_dataset(tmp_path, lead_cycles=3, past_cycles=3, threshold=1.0, cell_size=CELL_SIZE)
+
+    expected_accumulation = np.log1p(25 * 0.5)
+    flash_cell_rows = samples[(samples["cell_row"] == 1) & (samples["cell_col"] == 0)]
+    other_cell_rows = samples.drop(flash_cell_rows.index)
+    assert np.isclose(flash_cell_rows["flash_sum_now"].iloc[0], expected_accumulation)
+    assert (other_cell_rows["flash_sum_now"] == 0).all()
+    assert np.allclose(samples["flash_sum_now_neighbourhood_max"], expected_accumulation)
