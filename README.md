@@ -64,7 +64,7 @@ This is the best result up until this point.
 
 Adding days to try and improve performance:
 - very active days -> 1st, 11th, 15th and 26th of July
-- average active days -> 3rd and 24th of July
+- average active days -> 3rd, 24th and 31st of July
 - barely active days -> 9th, 13th, and 30th of July
 
 ## Limitations
