@@ -72,7 +72,8 @@ def pooled_scores(fold_results: pd.DataFrame, prefix: str) -> dict[str, float]:
     misses = fold_results[f"{prefix}_misses"].sum()
     false_alarms = fold_results[f"{prefix}_false_alarms"].sum()
     return {
-        "pod": hits / (hits + misses),
-        "far": false_alarms / (hits + false_alarms),
-        "csi": hits / (hits + misses + false_alarms),
+        "pod": hits / (hits + misses), # probability of detection
+        "far": false_alarms / (hits + false_alarms), # false alarm ratio
+        "csi": hits / (hits + misses + false_alarms), # critical success index
+
     }
