@@ -62,6 +62,11 @@ persistence {'pod': np.float64(0.423), 'far': np.float64(0.575), 'csi': np.float
 
 This is the best result up until this point.
 
+Adding days to try and improve performance:
+- very active days -> 1st, 11th, 15th and 26th of July
+- average active days -> 3rd and 24th of July
+- barely active days -> 9th, 13th, and 30th of July
+
 ## Limitations
 FCI data is every 30 minutes, while LI data is every 10 minutes. It was decided to accumulate the 3 LI data in the FCI time window.
 
