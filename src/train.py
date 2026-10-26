@@ -7,7 +7,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import average_precision_score
 
 from src.config import CONFIG
-from src.evaluation import categorical_scores
+from src.evaluation import categorical_scores, pool_reliability, probabilistic_scores, reliability_table
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +55,7 @@ def leave_one_block_out(
     """One row per test block: model scores and persistence scores on the same samples."""
     samples = samples.assign(block=assign_blocks(samples["day"], max_gap_days))
     fold_results = []
+    reliability_tables = []
     for test_block in sorted(samples["block"].unique()):
         is_test_block = samples["block"] == test_block
         train_samples, test_samples = samples[~is_test_block], samples[is_test_block]
@@ -71,15 +72,19 @@ def leave_one_block_out(
             "test_days": f"{test_days[0]}..{test_days[-1]} ({len(test_days)} days)",
             "threshold": threshold,
             "pr_auc": average_precision_score(test_samples["label"], probabilities),
+            **probabilistic_scores(test_samples["label"], probabilities),
             **{f"model_{name}": value for name, value in model_scores.items()},
             **{f"persistence_{name}": value for name, value in persistence_scores.items()},
         })
+        reliability_tables.append(reliability_table(test_samples["label"], probabilities))
         log.info(
             "block %s (%s) | threshold %.2f | CSI model %.3f vs persistence %.3f",
             test_block, fold_results[-1]["test_days"], threshold,
             model_scores["csi"], persistence_scores["csi"],
         )
-    return pd.DataFrame(fold_results)
+    results = pd.DataFrame(fold_results)
+    results.attrs["reliability"] = pool_reliability(reliability_tables)
+    return results
 
 
 def leave_one_day_out(samples: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:

@@ -17,7 +17,7 @@ from sklearn.metrics import average_precision_score
 from torch import nn
 
 from src.config import CONFIG
-from src.evaluation import categorical_scores
+from src.evaluation import categorical_scores, pool_reliability, probabilistic_scores, reliability_table
 from src.labels import ACCUMULATION_THRESHOLD, CELL_SIZE, CYCLE_DURATION, index_cycles
 from src.preprocessing import AREA_EXTENT
 from src.train import PROBABILITY_THRESHOLDS, assign_blocks
@@ -214,6 +214,7 @@ def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycle
              {int(b): sorted(set(days[block_ids == b])) for b in unique_blocks})
 
     fold_results = []
+    reliability_tables = []
     for test_block in unique_blocks:
         other_blocks = [b for b in unique_blocks if b != test_block]
         validation_block = min(other_blocks, key=lambda b: int((block_ids == b).sum()))
@@ -244,9 +245,13 @@ def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycle
             "test_days": f"{test_days[0]}..{test_days[-1]} ({len(test_days)} days)",
             "threshold": probability_threshold,
             "pr_auc": average_precision_score(observed_cells.ravel(), test_probabilities[:, region_mask].ravel()),
+            **probabilistic_scores(observed_cells, test_probabilities[:, region_mask]),
             **{f"model_{name}": value for name, value in model_scores.items()},
             **{f"persistence_{name}": value for name, value in persistence_scores.items()},
         })
+        reliability_tables.append(reliability_table(observed_cells, test_probabilities[:, region_mask]))
         log.info("block %s | CSI model %.3f vs persistence %.3f", test_block,
                  model_scores["csi"], persistence_scores["csi"])
-    return pd.DataFrame(fold_results)
+    results = pd.DataFrame(fold_results)
+    results.attrs["reliability"] = pool_reliability(reliability_tables)
+    return results

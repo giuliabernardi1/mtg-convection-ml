@@ -20,8 +20,9 @@ def main() -> int:
             PROCESSED_DIR, use_lightning, epochs=EPOCHS, subsample_step=SUBSAMPLE_STEP
         )
         fold_results.to_csv(RESULTS_DIR / f"{set_name}.csv", index=False)
+        fold_results.attrs["reliability"].to_csv(RESULTS_DIR / f"{set_name}_reliability.csv", index=False)
         print(f"\n=== {set_name} ===")
-        print(fold_results[["test_block", "test_days", "threshold", "pr_auc", "model_csi", "persistence_csi"]].round(3))
+        print(fold_results[["test_block", "test_days", "threshold", "pr_auc", "roc_auc", "brier", "brier_skill", "model_csi", "persistence_csi"]].round(3))
         for prefix in ("model", "persistence"):
             print(prefix, {name: round(value, 3) for name, value in pooled_scores(fold_results, prefix).items()})
     return 0
