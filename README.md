@@ -67,6 +67,53 @@ Adding days to try and improve performance:
 - average active days -> 3rd, 24th and 31st of July
 - barely active days -> 9th, 13th, and 30th of July
 
+=== fci_only ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.20   0.384      0.273            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.28   0.297      0.232            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.18   0.287      0.222            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.22   0.369      0.269            0.351
+model {'pod': np.float64(0.497), 'far': np.float64(0.691), 'csi': np.float64(0.236)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+=== fci_plus_current_lightning ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.24   0.536      0.415            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.24   0.437      0.326            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.26   0.365      0.295            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.24   0.493      0.363            0.351
+model {'pod': np.float64(0.542), 'far': np.float64(0.536), 'csi': np.float64(0.333)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+=== fci_plus_neighbourhood ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.24   0.462      0.325            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.22   0.353      0.264            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.22   0.356      0.266            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.24   0.431      0.293            0.351
+model {'pod': np.float64(0.557), 'far': np.float64(0.641), 'csi': np.float64(0.279)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+=== fci_plus_lightning_intensity ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.24   0.577      0.419            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.24   0.484      0.350            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.26   0.397      0.310            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.26   0.530      0.389            0.351
+model {'pod': np.float64(0.579), 'far': np.float64(0.534), 'csi': np.float64(0.348)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+=== all_features ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.24   0.621      0.429            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.30   0.520      0.374            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.30   0.428      0.317            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.26   0.555      0.391            0.351
+model {'pod': np.float64(0.594), 'far': np.float64(0.52), 'csi': np.float64(0.361)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+The ML model did not improve much.
+
 ## Limitations
 FCI data is every 30 minutes, while LI data is every 10 minutes. It was decided to accumulate the 3 LI data in the FCI time window.
 
