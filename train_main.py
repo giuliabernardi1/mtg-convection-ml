@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.labels import EXTRA_FEATURE_COLUMNS, FEATURE_COLUMNS
-from src.train import leave_one_day_out, pooled_scores
+from src.train import leave_one_block_out, leave_one_day_out, pooled_scores
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -30,10 +30,12 @@ def main() -> int:
     RESULTS_DIR.mkdir(exist_ok=True)
 
     for feature_set_name, feature_columns in FEATURE_SETS.items():
-        fold_results = leave_one_day_out(samples, feature_columns)
+        #fold_results = leave_one_day_out(samples, feature_columns)
+        fold_results = leave_one_block_out(samples, feature_columns)
         fold_results.to_csv(RESULTS_DIR / f"{feature_set_name}.csv", index=False)
         print(f"\n=== {feature_set_name} ===")
-        print(fold_results[["test_day", "threshold", "pr_auc", "model_csi", "persistence_csi"]].round(3))
+        #print(fold_results[["test_day", "threshold", "pr_auc", "model_csi", "persistence_csi"]].round(3))
+        print(fold_results[["test_block","test_days", "threshold", "pr_auc", "model_csi", "persistence_csi"]].round(3))
         for prefix in ("model", "persistence"):
             print(prefix, {name: round(value, 3) for name, value in pooled_scores(fold_results, prefix).items()})
     return 0
