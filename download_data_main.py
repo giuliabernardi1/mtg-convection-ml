@@ -1,7 +1,7 @@
 """Entry point for the data download step: FCI (only the chunks covering the region) and LI."""
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from dotenv import load_dotenv
 from itertools import islice
 from pathlib import Path
@@ -18,8 +18,9 @@ log = logging.getLogger(__name__)
 load_dotenv()
 
 # --- Configuration ---
-START = datetime(2026, 7, 18, 0, 0)
-END = datetime(2026, 7, 23, 0, 0)    # 18-22 July
+DAYS_TO_DOWNLOAD = [ date(2026, 7, 26), date(2026, 7, 11), date(2026, 7, 1), date(2026, 7, 9), date(2026, 7, 24),
+    date(2026, 7, 15), date(2026, 7, 3), date(2026, 7, 30), date(2026, 7, 31), date(2026, 7, 13),
+]
 OUT_ROOT = Path("data/raw_chunks")
 REGION = (6.6, 36.5, 18.8, 47.1)   # lon_min, lat_min, lon_max, lat_max; keep in sync with preprocessing
 CHUNKS_WKT_PATH = Path("resources/FCI_chunks.wkt")
@@ -38,12 +39,13 @@ def is_readable_netcdf(file_path: Path) -> bool:
         return False
     return True
 
-
-def download_collection(datastore, collection_id, step, chunk_ids, area, out_dir) -> int:
+def download_collection(
+    datastore, collection_id, step, chunk_ids, area, out_dir, period_start, period_end) -> int:
     """Download the selected files of every `step`-th product; return the number of failures."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    products = search(datastore, collection_id, START, END, area)
-    selected_products = islice(products, 0, None, step)
+
+    products = search(datastore, collection_id, period_start, period_end, area)
+    selected_products = islice(products, 0, None, step) 
     total_selected = len(range(0, products.total_results, step))
 
     failed_count = 0
@@ -69,18 +71,21 @@ def main() -> int:
     with logging_redirect_tqdm():
         datastore = get_datastore()
         area = ",".join(str(value) for value in REGION)
-
         fci_chunk_ids = find_relevant_chunks(CHUNKS_WKT_PATH, *REGION)
-        log.info("FCI chunks to download: %s", fci_chunk_ids)
+        fci_dir = OUT_ROOT / FCI_COLLECTION_ID.replace(":", "_")
+        li_dir = OUT_ROOT / LI_COLLECTION_ID.replace(":", "_")
 
-        failed_count = download_collection(
-            datastore, FCI_COLLECTION_ID, FCI_STEP, fci_chunk_ids, area,
-            OUT_ROOT / FCI_COLLECTION_ID.replace(":", "_"),
-        )
-        failed_count += download_collection(
-            datastore, LI_COLLECTION_ID, LI_STEP, None, area,
-            OUT_ROOT / LI_COLLECTION_ID.replace(":", "_"),
-        )
+        failed_count = 0
+        for day in DAYS_TO_DOWNLOAD:
+            period_start = datetime.combine(day, time(0, 0))
+            period_end = period_start + timedelta(days=1)
+            log.info("Day %s", day)
+            failed_count += download_collection(
+                datastore, FCI_COLLECTION_ID, FCI_STEP, fci_chunk_ids, area, fci_dir, period_start, period_end
+            )
+            failed_count += download_collection(
+                datastore, LI_COLLECTION_ID, LI_STEP, None, area, li_dir, period_start, period_end
+            )
 
     if failed_count:
         log.error("%d download(s) failed", failed_count)
