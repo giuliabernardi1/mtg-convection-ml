@@ -1,13 +1,11 @@
 import logging
 import sys
-from pathlib import Path
 
+from src.config import CONFIG, project_path
 from src.labels import build_dataset
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-
-PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
-OUTPUT_PATH = PROJECT_ROOT / "data" / "samples.parquet"
+PROCESSED_DIR = project_path(CONFIG["paths"]["processed_dir"])
+OUTPUT_PATH = project_path(CONFIG["paths"]["samples"])
 
 
 def main() -> int:

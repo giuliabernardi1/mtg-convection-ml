@@ -1,18 +1,17 @@
 import logging
 import sys
-from pathlib import Path
 
+from src.config import CONFIG, project_path
 from src.preprocessing import preprocess
-
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    raw_dir = project_path(CONFIG["paths"]["raw_dir"])
     failed_count = preprocess(
-        fci_dir=PROJECT_ROOT / "data" / "raw_chunks" / "EO_EUM_DAT_0662",
-        li_dir=PROJECT_ROOT / "data" / "raw_chunks" / "EO_EUM_DAT_0686",
-        out_dir=PROJECT_ROOT / "data" / "processed",
+        fci_dir=raw_dir / CONFIG["download"]["fci_collection_id"].replace(":", "_"),
+        li_dir=raw_dir / CONFIG["download"]["li_collection_id"].replace(":", "_"),
+        out_dir=project_path(CONFIG["paths"]["processed_dir"]),
     )
     return 1 if failed_count else 0
 

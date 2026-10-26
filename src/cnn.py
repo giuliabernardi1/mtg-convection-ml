@@ -16,13 +16,14 @@ import xarray as xr
 from sklearn.metrics import average_precision_score
 from torch import nn
 
+from src.config import CONFIG
 from src.evaluation import categorical_scores
 from src.labels import ACCUMULATION_THRESHOLD, CELL_SIZE, CYCLE_DURATION, index_cycles
 from src.preprocessing import AREA_EXTENT
 from src.train import PROBABILITY_THRESHOLDS, assign_blocks
 
 log = logging.getLogger(__name__)
-MAX_POSITIVE_WEIGHT = 10.0
+MAX_POSITIVE_WEIGHT = CONFIG["cnn"]["max_positive_weight"]
 
 
 @dataclass

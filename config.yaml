@@ -1,0 +1,73 @@
+# Central pipeline configuration.
+# Alternative location: environment variable MTG_CONFIG=/path/to/other.yaml
+# Relative paths are resolved against the project root.
+
+region:
+  # lon_min, lat_min, lon_max, lat_max
+  extent: [6.6, 36.5, 18.8, 47.1]
+
+paths:
+  raw_dir: data/raw_chunks
+  processed_dir: data/processed
+  samples: data/samples.parquet
+  results_dir: results
+  chunks_wkt: resources/FCI_chunks.wkt
+
+download:
+  fci_collection_id: "EO:EUM:DAT:0662"
+  li_collection_id: "EO:EUM:DAT:0686"
+  fci_step: 3   # keep one FCI image every 30 minutes
+  li_step: 1    # keep every LI product (needed for the labels)
+  days:
+    - 2026-07-26
+    - 2026-07-11
+    - 2026-07-01
+    - 2026-07-09
+    - 2026-07-24
+    - 2026-07-15
+    - 2026-07-03
+    - 2026-07-30
+    - 2026-07-31
+    - 2026-07-13
+
+preprocessing:
+  channels: [ir_105, wv_63]
+  li_variable: flash_accumulation
+
+labels:
+  cycle_minutes: 10
+  cell_size: 5                 # native pixels per cell side
+  accumulation_threshold: 1.0
+  neighbourhood_size: 3        # cells per side
+  lead_cycles: 3
+  past_cycles: 3
+
+train:
+  seed: 0
+  max_gap_days: 2              # days separated by at most this gap share a block
+  thresholds: {start: 0.02, stop: 0.90, step: 0.02}
+  model:
+    max_depth: 6
+    learning_rate: 0.1
+    max_iter: 150
+    l2_regularization: 1.0
+    early_stopping: false
+  feature_sets:
+    fci_only: [base]
+    fci_plus_current_lightning: [base, current_lightning]
+    fci_plus_neighbourhood: [base, fci_neighbourhood]
+    fci_plus_lightning_intensity: [base, lightning_intensity]
+    all_features: [base, current_lightning, extra]
+
+cnn:
+  epochs: 12
+  subsample_step: 1
+  max_positive_weight: 10.0
+  input_sets:
+    cnn_fci_only: false
+    cnn_fci_plus_lightning: true
+
+
+
+
+

@@ -11,24 +11,23 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import xarray as xr
 
 from src.chunks import find_relevant_chunks
+from src.config import CONFIG, project_path
 from src.download_data import download_entry, get_datastore, search, select_entries
 
 log = logging.getLogger(__name__)
 
 load_dotenv()
 
-# --- Configuration ---
-DAYS_TO_DOWNLOAD = [ date(2026, 7, 26), date(2026, 7, 11), date(2026, 7, 1), date(2026, 7, 9), date(2026, 7, 24),
-    date(2026, 7, 15), date(2026, 7, 3), date(2026, 7, 30), date(2026, 7, 31), date(2026, 7, 13),
-]
-OUT_ROOT = Path("data/raw_chunks")
-REGION = (6.6, 36.5, 18.8, 47.1)   # lon_min, lat_min, lon_max, lat_max; keep in sync with preprocessing
-CHUNKS_WKT_PATH = Path("resources/FCI_chunks.wkt")
+# --- Configuration (see config.yaml) ---
+DAYS_TO_DOWNLOAD = CONFIG["download"]["days"]
+OUT_ROOT = project_path(CONFIG["paths"]["raw_dir"])
+REGION = tuple(CONFIG["region"]["extent"])
+CHUNKS_WKT_PATH = project_path(CONFIG["paths"]["chunks_wkt"])
 
-FCI_COLLECTION_ID = "EO:EUM:DAT:0662"
-LI_COLLECTION_ID = "EO:EUM:DAT:0686"
-FCI_STEP = 3  # keep one FCI image every 30 minutes
-LI_STEP = 1   # keep every LI product: needed for the labels
+FCI_COLLECTION_ID = CONFIG["download"]["fci_collection_id"]
+LI_COLLECTION_ID = CONFIG["download"]["li_collection_id"]
+FCI_STEP = CONFIG["download"]["fci_step"]
+LI_STEP = CONFIG["download"]["li_step"]
 
 
 def is_readable_netcdf(file_path: Path) -> bool:

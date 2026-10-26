@@ -1,15 +1,15 @@
 import logging
 import sys
-from pathlib import Path
 
 from src.cnn import run_leave_one_block_out
+from src.config import CONFIG, project_path
 from src.train import pooled_scores
 
-PROCESSED_DIR = Path("data/processed")
-RESULTS_DIR = Path("results")
-EPOCHS = 12
-SUBSAMPLE_STEP = 1
-INPUT_SETS = {"cnn_fci_only": False, "cnn_fci_plus_lightning": True}
+PROCESSED_DIR = project_path(CONFIG["paths"]["processed_dir"])
+RESULTS_DIR = project_path(CONFIG["paths"]["results_dir"])
+EPOCHS = CONFIG["cnn"]["epochs"]
+SUBSAMPLE_STEP = CONFIG["cnn"]["subsample_step"]
+INPUT_SETS = CONFIG["cnn"]["input_sets"]
 
 
 def main() -> int:

@@ -15,6 +15,8 @@ import numpy as np
 import xarray as xr
 from satpy import Scene
 
+from src.config import CONFIG
+
 log = logging.getLogger(__name__)
 
 warnings.filterwarnings(
@@ -23,9 +25,9 @@ warnings.filterwarnings(
     category=RuntimeWarning,
 )
 
-AREA_EXTENT = (6.6, 36.5, 18.8, 47.1)  # lon_min, lat_min, lon_max, lat_max
-CHANNELS = ["ir_105", "wv_63"]
-LI_VAR = "flash_accumulation"
+AREA_EXTENT = tuple(CONFIG["region"]["extent"])  # lon_min, lat_min, lon_max, lat_max
+CHANNELS = CONFIG["preprocessing"]["channels"]
+LI_VAR = CONFIG["preprocessing"]["li_variable"]
 
 # ...<start 14 digits>_<end 14 digits>_N__O_<cycle of day>_<chunk>.nc
 _NAME_RE = re.compile(r"_(\d{8})\d{6}_\d{14}_N__\w_(\d{4})_\d{4}\.nc$")

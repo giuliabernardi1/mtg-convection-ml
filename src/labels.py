@@ -12,17 +12,21 @@ import pandas as pd
 import xarray as xr
 
 from scipy.ndimage import maximum_filter, minimum_filter
+from src.config import CONFIG
 from src.preprocessing import AREA_EXTENT
 
 log = logging.getLogger(__name__)
 
-CYCLE_DURATION = timedelta(minutes=10)
-CELL_SIZE = 5                  # native pixels per cell side
-ACCUMULATION_THRESHOLD = 1.0   # provisional: confirm on the full dataset
+_LABELS = CONFIG["labels"]
+CYCLE_DURATION = timedelta(minutes=_LABELS["cycle_minutes"])
+CELL_SIZE = _LABELS["cell_size"]                          # native pixels per cell side
+ACCUMULATION_THRESHOLD = _LABELS["accumulation_threshold"]
+LEAD_CYCLES = _LABELS["lead_cycles"]
+PAST_CYCLES = _LABELS["past_cycles"]
 FEATURE_COLUMNS = ["ir_mean", "ir_min", "wv_mean", "btd_max", "ir_cooling", "ir_min_cooling"]
 
 
-NEIGHBOURHOOD_SIZE = 3  # cells per side
+NEIGHBOURHOOD_SIZE = _LABELS["neighbourhood_size"]  # cells per side
 EXTRA_FEATURE_COLUMNS = [
     "flash_sum_now",
     "flash_sum_past",
@@ -70,8 +74,8 @@ def aggregate_to_cells(processed_path: Path, cell_size: int) -> dict[str, np.nda
 
 def build_dataset(
     processed_dir: Path,
-    lead_cycles: int = 3,
-    past_cycles: int = 3,
+    lead_cycles: int = LEAD_CYCLES,
+    past_cycles: int = PAST_CYCLES,
     threshold: float = ACCUMULATION_THRESHOLD,
     cell_size: int = CELL_SIZE,
     inside_region_only: bool = True,

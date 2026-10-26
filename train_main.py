@@ -1,25 +1,26 @@
 import logging
 import sys
-from pathlib import Path
 
 import pandas as pd
 
+from src.config import CONFIG, project_path
 from src.labels import EXTRA_FEATURE_COLUMNS, FEATURE_COLUMNS
-from src.train import leave_one_block_out, leave_one_day_out, pooled_scores
+from src.train import leave_one_block_out, pooled_scores
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+SAMPLES_PATH = project_path(CONFIG["paths"]["samples"])
+RESULTS_DIR = project_path(CONFIG["paths"]["results_dir"])
 
-SAMPLES_PATH = PROJECT_ROOT / "data" / "samples.parquet"
-RESULTS_DIR = PROJECT_ROOT / "results" 
-
-FCI_NEIGHBOURHOOD = ["ir_min_neighbourhood_min", "ir_min_cooling_neighbourhood_min"]
-LIGHTNING_INTENSITY = ["flash_sum_now", "flash_sum_past"]
+# Feature groups referenced by name in config.yaml (train.feature_sets)
+FEATURE_GROUPS = {
+    "base": FEATURE_COLUMNS,
+    "current_lightning": ["current_lightning"],
+    "fci_neighbourhood": ["ir_min_neighbourhood_min", "ir_min_cooling_neighbourhood_min"],
+    "lightning_intensity": ["flash_sum_now", "flash_sum_past"],
+    "extra": EXTRA_FEATURE_COLUMNS,
+}
 FEATURE_SETS = {
-    "fci_only": FEATURE_COLUMNS,
-    "fci_plus_current_lightning": FEATURE_COLUMNS + ["current_lightning"],
-    "fci_plus_neighbourhood": FEATURE_COLUMNS + FCI_NEIGHBOURHOOD,
-    "fci_plus_lightning_intensity": FEATURE_COLUMNS + LIGHTNING_INTENSITY,
-    "all_features": FEATURE_COLUMNS + ["current_lightning"] + EXTRA_FEATURE_COLUMNS,
+    name: [column for group in groups for column in FEATURE_GROUPS[group]]
+    for name, groups in CONFIG["train"]["feature_sets"].items()
 }
 
 

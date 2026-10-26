@@ -6,24 +6,25 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import average_precision_score
 
+from src.config import CONFIG
 from src.evaluation import categorical_scores
 
 log = logging.getLogger(__name__)
 
-PROBABILITY_THRESHOLDS = np.arange(0.02, 0.90, 0.02)
+_TRAIN = CONFIG["train"]
+_THRESHOLDS = _TRAIN["thresholds"]
+PROBABILITY_THRESHOLDS = np.arange(_THRESHOLDS["start"], _THRESHOLDS["stop"], _THRESHOLDS["step"])
+MAX_GAP_DAYS = _TRAIN["max_gap_days"]
 
 
 def fit_model(train_samples: pd.DataFrame, feature_columns: list[str]) -> HistGradientBoostingClassifier:
-    """Fixed hyperparameters, no early stopping (a random validation split would leak neighbouring cells)."""
-    model = HistGradientBoostingClassifier(
-        max_depth=6, learning_rate=0.1, max_iter=150,
-        l2_regularization=1.0, early_stopping=False, random_state=0,
-    )
+    """Hyperparameters from config; no early stopping (a random validation split would leak neighbouring cells)."""
+    model = HistGradientBoostingClassifier(**_TRAIN["model"], random_state=_TRAIN["seed"])
     model.fit(train_samples[feature_columns], train_samples["label"])
     return model
 
 
-def assign_blocks(days: pd.Series, max_gap_days: int = 2) -> pd.Series:
+def assign_blocks(days: pd.Series, max_gap_days: int = MAX_GAP_DAYS) -> pd.Series:
     """Days separated by at most max_gap_days share a block (one weather episode)."""
     sorted_days = pd.Series(pd.to_datetime(sorted(days.unique())))
     starts_new_block = sorted_days.diff().dt.days.fillna(0) > max_gap_days
@@ -49,7 +50,7 @@ def choose_threshold(train_samples: pd.DataFrame, feature_columns: list[str]) ->
 
 
 def leave_one_block_out(
-    samples: pd.DataFrame, feature_columns: list[str], max_gap_days: int = 2
+    samples: pd.DataFrame, feature_columns: list[str], max_gap_days: int = MAX_GAP_DAYS
 ) -> pd.DataFrame:
     """One row per test block: model scores and persistence scores on the same samples."""
     samples = samples.assign(block=assign_blocks(samples["day"], max_gap_days))
