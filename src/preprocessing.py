@@ -5,6 +5,8 @@ All outputs are north-up.
 """
 import logging
 import re
+import warnings
+
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,6 +16,12 @@ import xarray as xr
 from satpy import Scene
 
 log = logging.getLogger(__name__)
+
+warnings.filterwarnings(
+    "ignore",
+    message="invalid value encountered in cast",
+    category=RuntimeWarning,
+)
 
 AREA_EXTENT = (6.6, 36.5, 18.8, 47.1)  # lon_min, lat_min, lon_max, lat_max
 CHANNELS = ["ir_105", "wv_63"]
