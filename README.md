@@ -114,6 +114,25 @@ persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float
 
 The ML model did not improve much.
 
+### CNN
+=== cnn_fci_only ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.78   0.434      0.307            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.48   0.281      0.211            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.48   0.238      0.174            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.76   0.325      0.260            0.351
+model {'pod': np.float64(0.565), 'far': np.float64(0.753), 'csi': np.float64(0.208)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
+=== cnn_fci_plus_lightning ===
+   test_block                        test_days  threshold  pr_auc  model_csi  persistence_csi
+0           0  2026-07-01..2026-07-03 (2 days)       0.80   0.581      0.404            0.427
+1           1  2026-07-09..2026-07-15 (4 days)       0.70   0.588      0.408            0.335
+2           2  2026-07-18..2026-07-26 (7 days)       0.74   0.549      0.386            0.275
+3           3  2026-07-30..2026-07-31 (2 days)       0.76   0.508      0.356            0.351
+model {'pod': np.float64(0.671), 'far': np.float64(0.513), 'csi': np.float64(0.393)}
+persistence {'pod': np.float64(0.492), 'far': np.float64(0.505), 'csi': np.float64(0.328)}
+
 ## Limitations
 FCI data is every 30 minutes, while LI data is every 10 minutes. It was decided to accumulate the 3 LI data in the FCI time window.
 
