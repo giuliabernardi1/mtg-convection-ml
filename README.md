@@ -208,7 +208,7 @@ preprocessing_main.py       step 2: FCI + LI alignment and cropping
 labels_main.py              step 3: per-cell features and labels
 train_main.py               step 4: gradient boosting, leave-one-block-out
 cnn_main.py                 step 5: CNN, leave-one-block-out
-plot_reliability_main.py    step 6: reliability diagrams
+plot_main.py                step 6: reliability diagrams, maps, diurnal cycle
 src/                        library code (download, chunks, preprocessing, labels, train, cnn, evaluation, config)
 tests/                      unit tests on synthetic data
 notebooks/                  exploratory analyses
