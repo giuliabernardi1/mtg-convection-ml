@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 import torch
 
-from src.cnn import CellNowcastNet, CycleData, Sample, block_sum, list_samples, make_input
+from src.cnn import CellNowcastNet, CycleData, Sample, block_sum, fit_platt_scaler, list_samples, make_input
 
 
 def make_fake_cycle(ir_value=250.0, wv_value=240.0, flash_value=0.0, shape=(10, 10)):
@@ -50,3 +50,26 @@ def test_make_input_channels_are_cooling_and_water_vapour_difference():
     assert np.allclose(without_lightning[2], -10.0)   # 250 K now vs 260 K before
     assert np.allclose(without_lightning[3], -10.0)   # 240 K water vapour minus 250 K infrared
     assert np.allclose(with_lightning[4], np.log1p(0.5))
+
+
+def test_platt_scaler_shrinks_inflated_probabilities_and_keeps_the_ranking():
+    rng = np.random.default_rng(0)
+    true_probabilities = rng.uniform(0.0, 0.2, size=(50, 200))
+    targets = rng.uniform(size=true_probabilities.shape) < true_probabilities
+    inflated = np.clip(true_probabilities * 4, 0.0, 0.99)  # over-confident forecasts
+    region_mask = np.ones(200, dtype=bool)
+
+    calibrate = fit_platt_scaler(inflated, targets, region_mask)
+    calibrated = calibrate(inflated)
+
+    assert calibrated.mean() < inflated.mean()
+    assert abs(calibrated.mean() - targets.mean()) < 0.01
+    assert np.all(np.diff(calibrated.ravel()[np.argsort(inflated.ravel())]) >= -1e-12)
+
+
+def test_platt_scaler_is_the_identity_with_a_single_class():
+    probabilities = np.full((3, 4), 0.3)
+    calibrate = fit_platt_scaler(probabilities, np.zeros((3, 4), dtype=bool), np.ones(4, dtype=bool))
+
+    assert np.array_equal(calibrate(probabilities), probabilities)
+

@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 import xarray as xr
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
 from torch import nn
 
@@ -143,7 +144,7 @@ def select_device() -> torch.device:
 
 def train_network(cycles, train_samples, region_mask, use_lightning, threshold, cell_size,
                   epochs, device, batch_size=16, learning_rate=1e-3):
-    torch.manual_seed(0)
+    torch.manual_seed(42)
     channel_mean, channel_std = compute_channel_stats(cycles, train_samples, use_lightning)
     train_targets = targets_for(cycles, train_samples, threshold)
     positive_count = int(train_targets[:, region_mask].sum())
@@ -196,12 +197,42 @@ def choose_probability_threshold(probabilities, targets, region_mask) -> float:
     return float(PROBABILITY_THRESHOLDS[int(np.nanargmax(csi_per_threshold))])
 
 
+def _clipped_logit(probabilities: np.ndarray) -> np.ndarray:
+    clipped = np.clip(probabilities, 1e-6, 1 - 1e-6)
+    return np.log(clipped / (1 - clipped))
+
+
+def fit_platt_scaler(probabilities, targets, region_mask):
+    """Platt scaling on held-out data: logistic regression of the target on the logit of the probability.
+
+    The weighted training loss inflates probabilities; this maps them back to observed frequencies.
+    The mapping is monotonic, so rankings, ROC-AUC and binary decisions are unchanged.
+    Returns the identity when the held-out targets contain a single class.
+    """
+    held_out_targets = targets[:, region_mask].ravel().astype(bool)
+    if held_out_targets.all() or not held_out_targets.any():
+        log.warning("Single-class validation targets: probabilities are left uncalibrated")
+        return lambda new_probabilities: new_probabilities
+    regression = LogisticRegression()
+    regression.fit(_clipped_logit(probabilities[:, region_mask].ravel())[:, None], held_out_targets)
+
+    def calibrate(new_probabilities: np.ndarray) -> np.ndarray:
+        logits = _clipped_logit(new_probabilities.ravel())[:, None]
+        return regression.predict_proba(logits)[:, 1].reshape(new_probabilities.shape)
+
+    return calibrate
+
+
 def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycles: int = 3,
                             past_cycles: int = 3, cell_size: int = CELL_SIZE,
                             threshold: float = ACCUMULATION_THRESHOLD, max_gap_days: int = 2,
-                            epochs: int = 12, subsample_step: int = 1) -> pd.DataFrame:
+                            epochs: int = 12, subsample_step: int = 1,
+                            recalibrate: bool = CONFIG["cnn"]["recalibrate"]) -> pd.DataFrame:
     """For each test block: train on the other blocks except the smallest one, which is held out
-    to choose the probability threshold. subsample_step > 1 trains on every k-th sample (smoke runs)."""
+    to choose the probability threshold. subsample_step > 1 trains on every k-th sample (smoke runs).
+
+    With recalibrate, Platt scaling fitted on the validation block is applied before computing the
+    probabilistic scores and the reliability table; categorical scores always use raw probabilities."""
     device = select_device()
     cycles, region_mask = load_cycles(processed_dir, cell_size)
     samples = list_samples(cycles, lead_cycles, past_cycles)
@@ -228,8 +259,13 @@ def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycle
         )
         validation_probabilities = predict_probabilities(
             model, cycles, validation_samples, use_lightning, channel_mean, channel_std, device)
+        validation_targets = targets_for(cycles, validation_samples, threshold)
         probability_threshold = choose_probability_threshold(
-            validation_probabilities, targets_for(cycles, validation_samples, threshold), region_mask)
+            validation_probabilities, validation_targets, region_mask)
+        if recalibrate:
+            calibrate = fit_platt_scaler(validation_probabilities, validation_targets, region_mask)
+        else:
+            calibrate = lambda new_probabilities: new_probabilities
 
         test_probabilities = predict_probabilities(
             model, cycles, test_samples, use_lightning, channel_mean, channel_std, device)
@@ -237,6 +273,8 @@ def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycle
         test_persistence = np.stack([cycles[s.image_time].cell_flash_sum >= threshold for s in test_samples])
 
         observed_cells = test_targets[:, region_mask]
+        raw_cells = test_probabilities[:, region_mask]
+        calibrated_cells = calibrate(test_probabilities)[:, region_mask]
         model_scores = categorical_scores(observed_cells, test_probabilities[:, region_mask] >= probability_threshold)
         persistence_scores = categorical_scores(observed_cells, test_persistence[:, region_mask])
         test_days = sorted({s.image_time.date().isoformat() for s in test_samples})
@@ -245,11 +283,12 @@ def run_leave_one_block_out(processed_dir: Path, use_lightning: bool, lead_cycle
             "test_days": f"{test_days[0]}..{test_days[-1]} ({len(test_days)} days)",
             "threshold": probability_threshold,
             "pr_auc": average_precision_score(observed_cells.ravel(), test_probabilities[:, region_mask].ravel()),
-            **probabilistic_scores(observed_cells, test_probabilities[:, region_mask]),
+            **probabilistic_scores(observed_cells, calibrated_cells),
+            "brier_skill_raw": probabilistic_scores(observed_cells, raw_cells)["brier_skill"],
             **{f"model_{name}": value for name, value in model_scores.items()},
             **{f"persistence_{name}": value for name, value in persistence_scores.items()},
         })
-        reliability_tables.append(reliability_table(observed_cells, test_probabilities[:, region_mask]))
+        reliability_tables.append(reliability_table(observed_cells, calibrated_cells))
         log.info("block %s | CSI model %.3f vs persistence %.3f", test_block,
                  model_scores["csi"], persistence_scores["csi"])
     results = pd.DataFrame(fold_results)

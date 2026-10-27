@@ -43,7 +43,7 @@ labels:
   past_cycles: 3
 
 train:
-  seed: 0
+  seed: 42
   max_gap_days: 2              # days separated by at most this gap share a block
   thresholds: {start: 0.02, stop: 0.90, step: 0.02}
   model:
@@ -63,6 +63,7 @@ cnn:
   epochs: 12
   subsample_step: 1
   max_positive_weight: 10.0
+  recalibrate: true            # Platt scaling on the validation block (probabilistic scores only)
   input_sets:
     cnn_fci_only: false
     cnn_fci_plus_lightning: true
